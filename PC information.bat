@@ -27,8 +27,13 @@ for /f "tokens=2 delims==" %%a in ('wmic computersystem get TotalPhysicalMemory 
 Set /a TotalPhysicalMemory = %RAM_GB:~0,-3%/1024/1024
 
 
-:: === GET GPU (NVIDIA/AMD) - CORRECTED ===
-for /F "tokens=* skip=1" %%n in ('WMIC path Win32_VideoController get Name ^| findstr "."') do set GPU_NAME=%%n
+:: Get last GPU (usually dedicated) that matches NVIDIA/AMD
+set "GPU_NAME=Integrated Graphics Only"
+for /f "delims=" %%g in ('wmic path Win32_VideoController get Name ^| findstr /i "NVIDIA AMD Radeon"') do (
+    set "GPU_NAME=%%g"
+)
+:: Trim trailing spaces
+for /f "tokens=* delims= " %%t in ("%GPU_NAME%") do set "GPU_NAME=%%t"
 
 :: Fallback if chipset is empty
 if "%CHIPSET_MFG%%CHIPSET_MODEL%"=="" (
@@ -48,4 +53,5 @@ echo ========================================
 echo.
 echo IPs detected successfully.
 echo Press any key to continue...
+
 pause >nul
