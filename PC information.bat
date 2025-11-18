@@ -27,19 +27,28 @@ for /f "tokens=2 delims==" %%a in ('wmic computersystem get TotalPhysicalMemory 
 Set /a TotalPhysicalMemory = %RAM_GB:~0,-3%/1024/1024
 
 
-:: Get last GPU (usually dedicated) that matches NVIDIA/AMD
-set "GPU_NAME=Integrated Graphics Only"
-for /f "delims=" %%g in ('wmic path Win32_VideoController get Name ^| findstr /i "NVIDIA AMD Radeon"') do (
-    set "GPU_NAME=%%g"
-)
-:: Trim trailing spaces
-for /f "tokens=* delims= " %%t in ("%GPU_NAME%") do set "GPU_NAME=%%t"
+:: === GET GPU (NVIDIA/AMD) - CORRECTED ===
+set "GPU_NAME="
 
-:: Fallback if chipset is empty
-if "%CHIPSET_MFG%%CHIPSET_MODEL%"=="" (
-    set "CHIPSET_MFG=Unknown"
-    set "CHIPSET_MODEL=Unknown"
+:: Get NVIDIA GPU first
+for /f "tokens=*" %%i in ('wmic path Win32_VideoController get Name ^| findstr /I "NVIDIA"') do (
+    set "GPU_NAME=%%i"
 )
+
+:: If NVIDIA not found, try AMD / Radeon
+if not defined GPU_NAME (
+    for /f "tokens=*" %%i in ('wmic path Win32_VideoController get Name ^| findstr /I "AMD Radeon"') do (
+        set "GPU_NAME=%%i"
+    )
+)
+
+:: If still nothing, take first available GPU
+if not defined GPU_NAME (
+    for /f "skip=1 tokens=*" %%i in ('wmic path Win32_VideoController get Name ^| findstr "."') do (
+        if not defined GPU_NAME set "GPU_NAME=%%i"
+    )
+)
+
 
 :: Output
 echo ========================================
@@ -53,5 +62,4 @@ echo ========================================
 echo.
 echo IPs detected successfully.
 echo Press any key to continue...
-
 pause >nul
